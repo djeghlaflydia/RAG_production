@@ -1,45 +1,70 @@
-import os
-import tempfile
-from pathlib import Path
-from langchain_core.documents import Document
-from langchain_community.document_loaders import (
-    TextLoader,
-    WebBaseLoader,
-    DirectoryLoader,
-    PyPDFLoader,
-    )
+# Embedding = transformer du texte en représentation numérique permettant de comparer sa similarité sémantique.
 
-from bs4 import BeautifulSoup
+'''
+import os
 from dotenv import load_dotenv
+from openai import OpenAI
+
 load_dotenv()
 
-def load_text_file():
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_file:
-        temp_file.write(b"This is a sample text file for testing.")
-        temp_file_path = temp_file.name
+client =OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    try:
-        loader = TextLoader(temp_file_path)
-        documents = loader.load()
+# =========================
+# 1. Generate a response
+# =========================
 
-        for doc in documents:
-            print("document content:")
-            print(doc)
-            print(doc.page_content)
+CONVERSATION = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+        {"role":"system","content":"you are a helpful assistant."},
+        {"role":"user","content":"what is the capital of France?"},
+    ]
+)
 
-    finally:
-        os.remove(temp_file_path)
+print(CONVERSATION.choices[0].message.content)
+
+# =========================
+# 2. Generate embeddings
+# =========================
+
+response = client.embeddings.create(
+    input="your text string goes here",
+    model="text-embedding-3-small")
+print(response)
+'''
+
+import os
+from dotenv import load_dotenv
+from google import genai
+
+load_dotenv()
+
+client = genai.Client(
+    api_key=os.getenv("GOOGLE_API_KEY")
+)
+
+# =========================
+# 1. Generate a response
+# =========================
+
+response = client.models.generate_content(
+    model="gemini-3.6-flash",
+    contents="What is the capital of France?"
+)
+
+print(response.text)
 
 
-def pdf_loader(pdf_path:str):
-    loader = PyPDFLoader(pdf_path)
-    documents = loader.load()
+# =========================
+# 2. Generate embeddings
+# =========================
 
-    print(f"loaded {len(documents)} document(s) from PDF")
-    for i, doc in enumerate(documents):
-        print(f"document {i+1} content preview: {doc.page_content[:100]}...")
-        print(f"Metadata: {doc.metadata}")
+embedding_response = client.models.embed_content(
+    model="gemini-embedding-001",
+    contents="your text string goes here"
+)
 
-if __name__ == "__main__":
-    pdf_loader("./docs/langchain_demo.pdf")
+embedding = embedding_response.embeddings[0].values
 
+print("Number of values:", len(embedding))
+print("First 5 values:", embedding[:5])
