@@ -4,7 +4,7 @@ from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_experimental import HybridSearch
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_community.retrievers import EnsembleRetriever
+from langchain_community.retrievers import BM25Retriever, EnsembleRetriever
 from dotenv import load_dotenv
 
 embeddings = GoogleGenerativeAIEmbeddings(
@@ -46,3 +46,30 @@ documents = [
 
 print (f"Loaded {len(documents)} documents")
 
+# Create embeddings and vector store
+vectorstore = Chroma.from_documents(
+    documents,
+    embeddings,
+    collection_name="hybrid_test",
+)
+
+#creat vector retriever
+vector_retriever = vectorstore.as_retriever(
+    search_kwargs={"k": 3} #return top 3
+)
+
+print("Vector retriever ready")
+
+
+# BM25 works on the raw text
+bm25_retrievers = BM25Retriever.from_documents(documents, k=3)
+
+print("BM25 retriever ready")
+
+
+#Combine with EnsembleRetriever to create a hybrid search
+hybrid_retriever = EnsembleRetriever(
+    retrievers=[vector_retriever, bm25_retrievers],
+    weights=[0.5, 0.5]  # Adjust weights as needed
+)
+print("Hybrid retriever ready")
